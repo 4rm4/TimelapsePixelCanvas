@@ -13,7 +13,7 @@ BLOCK_SIZE = 64
 AREA_LEFT = 7
 AREA_RIGHT = 8
 TOTAL_AREA = AREA_LEFT + AREA_RIGHT
-AREA_SIZE = TOTAL_AREA * BLOCK_SIZE
+CHUNK_SIZE = TOTAL_AREA * BLOCK_SIZE
 
 COLORS = [
 	(255, 255, 255),
@@ -86,16 +86,16 @@ def calc_max_chunks(arg_chunks, start_x, end_x, start_y, end_y):
 		width = end_x - start_x
 		height = end_y - start_y
 
-		chunks_x = abs(width / AREA_SIZE)
-		chunks_y = abs(height / AREA_SIZE)
+		chunks_x = abs(width / CHUNK_SIZE)
+		chunks_y = abs(height / CHUNK_SIZE)
 		max_chunks = int(math.ceil(chunks_x if chunks_x >= chunks_y else chunks_y))
 		return (max_chunks if max_chunks % 2 else max_chunks + 1)
 	return arg_chunks
 
-def calc_size_area(radius):
-	return radius * AREA_SIZE
+def calc_size_area(chunks):
+	return chunks * CHUNK_SIZE
 
-def get_points(x, y, start_x, end_x, start_y, end_y):
+def get_midpoint(x, y, start_x, end_x, start_y, end_y):
 	if all(not v is None for v in [x, y]):
 		return x, y
 
@@ -104,12 +104,12 @@ def get_points(x, y, start_x, end_x, start_y, end_y):
 
 	return (2 * start_x + width) // 2, (2 * start_y + height) // 2
 
-def setup_map_image(num_blocks, point_x, point_y):
+def setup_map_image(num_blocks, middle_x, middle_y):
 	map_image = {}
 	last = 0
-	for x in xrange((point_x - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + point_x) * BLOCK_SIZE):
+	for x in xrange((middle_x - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + middle_x) * BLOCK_SIZE):
 		map_image[x] = {}
-		for y in xrange((point_y - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + point_y) * BLOCK_SIZE):
+		for y in xrange((middle_y - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + middle_y) * BLOCK_SIZE):
 			map_image[x][y] = None
 	return map_image
 
@@ -124,8 +124,8 @@ def calc_centers_axis(middle_x, middle_y):
     offset_y = center_y % 15
     return center_x - offset_x, center_y - offset_y, offset_x, offset_y
 
-def bigchunck(max_chunks, point_x, point_y):
-	center_block_x, center_block_y, offset_x, offset_y = calc_centers_axis(point_x, point_y)
+def bigchunk(max_chunks, middle_x, middle_y):
+	center_block_x, center_block_y, offset_x, offset_y = calc_centers_axis(middle_x, middle_y)
 
 	num_blocks = get_num_blocks(max_chunks)
 
@@ -156,10 +156,10 @@ def bigchunck(max_chunks, point_x, point_y):
 							index += 1
 	return map_image
 
-def get_sizes(radius, x, y, start_x, end_x, start_y, end_y):
+def get_sizes(chunks, x, y, start_x, end_x, start_y, end_y):
 	if all(not v is None for v in [start_x, end_x, start_y, end_y]):
 		return abs(end_x - start_x), abs(end_y - start_y)
-	return abs(calc_size_area(radius)), abs(calc_size_area(radius))
+	return abs(calc_size_area(chunks)), abs(calc_size_area(chunks))
 
 def create_image(width, height):
 	image = Image.new('RGB', (width, height), (255,255,255))
@@ -185,13 +185,13 @@ def convert_custom_image(map_image, pix, start_x, end_x, start_y, end_y):
 
 	return pix
 
-def convert_image_total(map_image, pix, radius, point_x, point_y):
-	iteration = get_num_blocks(radius)
+def convert_image_total(map_image, pix, chunks, middle_x, middle_y):
+	num_blocks = get_num_blocks(chunks)
 	pix_x, pix_y = 0, 0
 
-	for y in xrange((point_y - (iteration + AREA_LEFT)) * BLOCK_SIZE, (point_y + (iteration + AREA_RIGHT)) * BLOCK_SIZE):
+	for y in xrange((middle_y - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (middle_y + (num_blocks + AREA_RIGHT)) * BLOCK_SIZE):
 		pix_x = 0
-		for x in xrange((point_x - (iteration + AREA_LEFT))* BLOCK_SIZE, (point_y + (iteration + AREA_RIGHT)) * BLOCK_SIZE):
+		for x in xrange((middle_x - (num_blocks + AREA_LEFT))* BLOCK_SIZE, (middle_y + (num_blocks + AREA_RIGHT)) * BLOCK_SIZE):
 			pix[pix_x, pix_y] = COLORS[map_image[x][y]]
 			pix_x += 1
 		pix_y += 1
@@ -203,15 +203,15 @@ def save_image(image, directory):
 	name_file = os.path.join(directory, datetime.datetime.utcnow().strftime("%Y%m%d%H%M%SUTC") + '.png')
 	image.save(name_file)
 
-def download_save_image(directory, radius, width, height, point_x, point_y, start_x, start_y, end_x, end_y):
-	map_image = bigchunck(radius, point_x, point_y)
+def download_save_image(directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y):
+	map_image = bigchunk(chunks, middle_x, middle_y)
 
 	image, pix = create_image(width, height)
 
 	if all(not v is None for v in [start_x, end_x, start_y, end_y]):
 		image.pix = convert_custom_image(map_image, pix, start_x, end_x, start_y, end_y)
 	else:
-		image.pix = convert_image_total(map_image, pix, radius, point_x, point_y)
+		image.pix = convert_image_total(map_image, pix, chunks, middle_x, middle_y)
 	
 	save_image(image, directory)
 
@@ -220,24 +220,24 @@ def main():
 
 	valide_args(args)
 
-	point_x, point_y = get_points(args.x, args.y, args.start_x, args.end_x, args.start_y, args.end_y)
+	middle_x, middle_y = get_midpoint(args.x, args.y, args.start_x, args.end_x, args.start_y, args.end_y)
 
-	radius = calc_max_chunks(args.radius, args.start_x, args.end_x, args.start_y, args.end_y)
+	max_chunks = calc_max_chunks(args.radius, args.start_x, args.end_x, args.start_y, args.end_y)
 
-	width, height = get_sizes(radius, args.x, args.y, args.start_x, args.end_x, args.start_y, args.end_y)	
+	width, height = get_sizes(max_chunks, args.x, args.y, args.start_x, args.end_x, args.start_y, args.end_y)	
 	
-	if radius > 5 and raw_input('Are you sure do you want a radius above 5?\nIt\'s require a lot of CPU and memory.\ny(Yes)/anything(No)\n') in ['y']:
+	if max_chunks > 5 and raw_input('Are you sure do you want a radius above 5?\nIt\'s require a lot of CPU and memory.\ny(Yes)/anything(No)\n') in ['y']:
 		raise KeyboardInterrupt()
 	
 	schedule = sched.scheduler(time.time, time.sleep)
-	def scheduler(sc, seconds, directory, radius, width, height, point_x, point_y, start_x, start_y, end_x, end_y):
-		download_save_image(directory, radius, width, height, point_x, point_y, start_x, start_y, end_x, end_y)	
+	def scheduler(sc, seconds, directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y):
+		download_save_image(directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y)	
 		
-		sc.enter(seconds, 1, scheduler, (sc, seconds, directory, radius, width, height, point_x, point_y, start_x, start_y, end_x, end_y))
+		sc.enter(seconds, 1, scheduler, (sc, seconds, directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y))
 	
-	schedule.enter(args.seconds, 1, scheduler, (schedule, args.seconds, args.directory, radius, width, height, point_x, point_y, args.start_x, args.start_y, args.end_x, args.end_y))
+	schedule.enter(args.seconds, 1, scheduler, (schedule, args.seconds, args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y))
 	
-	download_save_image(args.directory, radius, width, height, point_x, point_y, args.start_x, args.start_y, args.end_x, args.end_y)	
+	download_save_image(args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y)	
 	schedule.run()
 
 
