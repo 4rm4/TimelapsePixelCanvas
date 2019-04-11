@@ -125,7 +125,6 @@ def calc_centers_axis(middle_x, middle_y):
     return center_x - offset_x, center_y - offset_y, offset_x, offset_y
 
 def bigchunck(max_chunks, point_x, point_y):
-	# point_x, point_y = (point_x - (point_x % BLOCK_SIZE)) / BLOCK_SIZE, (point_y - (point_y % BLOCK_SIZE)) / BLOCK_SIZE
 	center_block_x, center_block_y, offset_x, offset_y = calc_centers_axis(point_x, point_y)
 
 	num_blocks = get_num_blocks(max_chunks)
@@ -176,12 +175,6 @@ def convert_custom_image(map_image, pix, start_x, end_x, start_y, end_y):
 	bigger_y = (start_y if start_y > end_y else end_y)
 	print("Min Y: %s Max Y: %s" % (str(minor_y), str(bigger_y)))
 	pix_x, pix_y = 0, 0
-
-	# print(len(map_image))
-	# print(map_image[0][0])
-	# file1 = open("myfile.txt","w")
-	# file1.writelines(str(map_image))
-	# print(map_image) # bad idea lol
 	
 	for x in xrange(minor_x, bigger_x ):
 		pix_y = 0
