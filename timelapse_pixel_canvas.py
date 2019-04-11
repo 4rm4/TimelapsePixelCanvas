@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+from __future__ import division
 import sched, time, os, math, datetime
 
 from argparse import ArgumentParser
 from urllib2 import Request as request, urlopen
 from PIL import Image
+
+import math
 
 BLOCK_SIZE = 64
 AREA_LEFT = 7
@@ -35,7 +37,9 @@ COLORS = [
 URL = 'http://pixelcanvas.io/api/bigchunk/%s.%s.bmp'
 
 def download_bmp(x, y):
-	return urlopen(request(URL % (x, y), headers = {'User-agent':'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)'})).read()
+	r = urlopen(request(URL % (x, y), headers = {'User-agent':'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)'}))
+	print(r.getcode())
+	return r.read()
 
 def parse_args():
 	parser = ArgumentParser()
@@ -76,13 +80,17 @@ def valide_args(args):
 			raise ValueError("The radius must be odd")	
 
 
-def calc_radius(arg_radius, start_x, end_x, start_y, end_y):
+def calc_max_chunks(arg_chunks, start_x, end_x, start_y, end_y):
+	# if using bounded area arguments
 	if all(not v is None for v in [start_x, end_x, start_y, end_y]):
-		radius_x = abs((end_x - start_x) / AREA_SIZE)
-		radius_y = abs((end_y - start_y) / AREA_SIZE)
-		radius = int(math.ceil(radius_x if radius_x >= radius_y else radius_y))
-		return (radius if radius % 2 else radius + 1)
-	return arg_radius
+		width = end_x - start_x
+		height = end_y - start_y
+
+		chunks_x = abs(width / AREA_SIZE)
+		chunks_y = abs(height / AREA_SIZE)
+		max_chunks = int(math.ceil(chunks_x if chunks_x >= chunks_y else chunks_y))
+		return (max_chunks if max_chunks % 2 else max_chunks + 1)
+	return arg_chunks
 
 def calc_size_area(radius):
 	return radius * AREA_SIZE
@@ -91,27 +99,51 @@ def get_points(x, y, start_x, end_x, start_y, end_y):
 	if all(not v is None for v in [x, y]):
 		return x, y
 
-	return (end_x + start_x) / 2, (end_y + start_y) / 2
+	width = end_x - start_x
+	height = end_y - start_y
 
-def setup_map_image(iteration, point_x, point_y):
+	return (2 * start_x + width) // 2, (2 * start_y + height) // 2
+
+def setup_map_image(num_blocks, point_x, point_y):
 	map_image = {}
 	last = 0
-	for x in xrange((point_x - (iteration + AREA_LEFT)) * BLOCK_SIZE, (iteration + AREA_RIGHT + point_x) * BLOCK_SIZE):
+	for x in xrange((point_x - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + point_x) * BLOCK_SIZE):
 		map_image[x] = {}
-		for y in xrange((point_y - (iteration + AREA_LEFT)) * BLOCK_SIZE, (iteration + AREA_RIGHT + point_y) * BLOCK_SIZE):
+		for y in xrange((point_y - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + point_y) * BLOCK_SIZE):
 			map_image[x][y] = None
 	return map_image
 
-def get_iteration(radius):
-	return int(math.ceil(radius / 2) * TOTAL_AREA)
+def get_num_blocks(max_chunks):
+	return int(math.ceil(max_chunks / 2) * TOTAL_AREA)
 
-def bigchunck(radius, point_x, point_y):
-	point_x, point_y = (point_x - (point_x % BLOCK_SIZE)) / BLOCK_SIZE, (point_y - (point_y % BLOCK_SIZE)) / BLOCK_SIZE
-	iteration = get_iteration(radius)
-	map_image = setup_map_image(iteration, point_x, point_y)
 
-	for center_x in xrange(point_x - iteration, 1 + point_x + iteration, TOTAL_AREA):
-		for center_y in xrange(point_y - iteration, 1 + point_y + iteration, TOTAL_AREA):
+def calc_centers_axis(middle_x, middle_y):
+    center_x = (middle_x - (middle_x % 64)) // 64
+    center_y = (middle_y - (middle_y % 64)) // 64
+    offset_x = center_x % 15
+    offset_y = center_y % 15
+    return center_x - offset_x, center_y - offset_y, offset_x, offset_y
+
+def bigchunck(max_chunks, point_x, point_y):
+	# point_x, point_y = (point_x - (point_x % BLOCK_SIZE)) / BLOCK_SIZE, (point_y - (point_y % BLOCK_SIZE)) / BLOCK_SIZE
+	center_block_x, center_block_y, offset_x, offset_y = calc_centers_axis(point_x, point_y)
+
+	num_blocks = get_num_blocks(max_chunks)
+
+
+	if offset_x is not 0:
+	    end = (center_block_x + offset_x + num_blocks) * 64
+	    print("This bot may be blind for all pixels east of %s" % end)
+	if offset_y is not 0:
+	    end = (center_block_y + offset_y + num_blocks) * 64
+	    print("This bot may be blind for all pixels south of %s" % end)
+
+	# matrix
+	map_image = setup_map_image(num_blocks, center_block_x, center_block_y)
+
+	for center_x in xrange(center_block_x - num_blocks, 1 + center_block_x + num_blocks, TOTAL_AREA):
+		for center_y in xrange(center_block_y - num_blocks, 1 + center_block_y + num_blocks, TOTAL_AREA):
+			print("Loading chunk (%s, %s)..." % (center_x, center_y))
 			raw = download_bmp(center_x, center_y)
 			index = 0
 			for block_y in xrange(center_y - AREA_LEFT, center_y + AREA_RIGHT):
@@ -138,15 +170,22 @@ def create_image(width, height):
 def convert_custom_image(map_image, pix, start_x, end_x, start_y, end_y):	
 	minor_x = (start_x if start_x < end_x else end_x)
 	bigger_x = (start_x if start_x > end_x else end_x)
+	print("Min X: %s Max X: %s" % (str(minor_x), str(bigger_x)))
 
 	minor_y = (start_y if start_y < end_y else end_y)
 	bigger_y = (start_y if start_y > end_y else end_y)
-	
+	print("Min Y: %s Max Y: %s" % (str(minor_y), str(bigger_y)))
 	pix_x, pix_y = 0, 0
+
+	# print(len(map_image))
+	# print(map_image[0][0])
+	# file1 = open("myfile.txt","w")
+	# file1.writelines(str(map_image))
+	# print(map_image) # bad idea lol
 	
-	for x in xrange(minor_x, bigger_x - 1 ):
+	for x in xrange(minor_x, bigger_x ):
 		pix_y = 0
-		for y in xrange(minor_y, bigger_y - 1):
+		for y in xrange(minor_y, bigger_y):
 			pix[pix_x, pix_y] = COLORS[map_image[x][y]]
 			pix_y += 1
 		pix_x += 1
@@ -154,7 +193,7 @@ def convert_custom_image(map_image, pix, start_x, end_x, start_y, end_y):
 	return pix
 
 def convert_image_total(map_image, pix, radius, point_x, point_y):
-	iteration = get_iteration(radius)
+	iteration = get_num_blocks(radius)
 	pix_x, pix_y = 0, 0
 
 	for y in xrange((point_y - (iteration + AREA_LEFT)) * BLOCK_SIZE, (point_y + (iteration + AREA_RIGHT)) * BLOCK_SIZE):
@@ -190,7 +229,7 @@ def main():
 
 	point_x, point_y = get_points(args.x, args.y, args.start_x, args.end_x, args.start_y, args.end_y)
 
-	radius = calc_radius(args.radius, args.start_x, args.end_x, args.start_y, args.end_y)
+	radius = calc_max_chunks(args.radius, args.start_x, args.end_x, args.start_y, args.end_y)
 
 	width, height = get_sizes(radius, args.x, args.y, args.start_x, args.end_x, args.start_y, args.end_y)	
 	
@@ -205,6 +244,7 @@ def main():
 	
 	schedule.enter(args.seconds, 1, scheduler, (schedule, args.seconds, args.directory, radius, width, height, point_x, point_y, args.start_x, args.start_y, args.end_x, args.end_y))
 	
+	download_save_image(args.directory, radius, width, height, point_x, point_y, args.start_x, args.start_y, args.end_x, args.end_y)	
 	schedule.run()
 
 
