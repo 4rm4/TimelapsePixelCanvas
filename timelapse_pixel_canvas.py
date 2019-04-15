@@ -36,7 +36,7 @@ COLORS = [
     (130, 0, 128)
 ]
 
-URL = 'http://pixelcanvas.io/api/bigchunk/%s.%s.bmp'
+URL = 'https://pixelcanvas.io/api/bigchunk/%s.%s.bmp'
 
 def download_bmp(x, y):
     try:
