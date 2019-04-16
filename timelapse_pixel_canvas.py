@@ -9,6 +9,7 @@ from urllib2 import URLError, HTTPError
 from PIL import Image
 import httplib
 from retry_decorator import retry
+from i18n import I18n
 
 import math
 
@@ -135,17 +136,17 @@ def bigchunk(max_chunks, middle_x, middle_y):
 
     if offset_x is not 0:
         end = (center_block_x + offset_x + num_blocks) * 64
-        print("This bot may be blind for all pixels east of %s" % end)
+        print(I18n.get("This bot may be blind for all pixels east of %s") % end)
     if offset_y is not 0:
         end = (center_block_y + offset_y + num_blocks) * 64
-        print("This bot may be blind for all pixels south of %s" % end)
+        print(I18n.get("This bot may be blind for all pixels south of %s") % end)
 
     # matrix
     map_image = setup_map_image(num_blocks, center_block_x, center_block_y)
 
     for center_x in xrange(center_block_x - num_blocks, 1 + center_block_x + num_blocks, TOTAL_AREA):
         for center_y in xrange(center_block_y - num_blocks, 1 + center_block_y + num_blocks, TOTAL_AREA):
-            print("Loading chunk (%s, %s)..." % (center_x, center_y))
+            print(I18n.get('Loading chunk (%s, %s)...') % (center_x, center_y))
             raw = download_bmp(center_x, center_y)
             index = 0
             for block_y in xrange(center_y - AREA_LEFT, center_y + AREA_RIGHT):
@@ -172,11 +173,9 @@ def create_image(width, height):
 def convert_custom_image(map_image, pix, start_x, end_x, start_y, end_y):   
     minor_x = (start_x if start_x < end_x else end_x)
     bigger_x = (start_x if start_x > end_x else end_x)
-    print("Min X: %s Max X: %s" % (str(minor_x), str(bigger_x)))
 
     minor_y = (start_y if start_y < end_y else end_y)
     bigger_y = (start_y if start_y > end_y else end_y)
-    print("Min Y: %s Max Y: %s" % (str(minor_y), str(bigger_y)))
     pix_x, pix_y = 0, 0
     
     for x in xrange(minor_x, bigger_x ):
@@ -205,6 +204,7 @@ def save_image(image, directory):
         os.makedirs(directory)
     name_file = os.path.join(directory, datetime.datetime.utcnow().strftime("%Y%m%d%H%M%SUTC") + '.png')
     image.save(name_file)
+    print(I18n.get('Saved %s') % name_file)
 
 def download_save_image(directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y):
     map_image = bigchunk(chunks, middle_x, middle_y)
@@ -229,19 +229,28 @@ def main():
 
     width, height = get_sizes(max_chunks, args.x, args.y, args.start_x, args.end_x, args.start_y, args.end_y)   
     
-    if max_chunks > 5 and raw_input('Are you sure do you want a radius above 5?\nIt\'s require a lot of CPU and memory.\ny(Yes)/anything(No)\n') in ['y']:
+    if max_chunks > 5 and raw_input(I18n.get('rad > 5 prompt')) in ['y']:
         raise KeyboardInterrupt()
     
-    schedule = sched.scheduler(time.time, time.sleep)
-    def scheduler(sc, seconds, directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y):
-        download_save_image(directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y)   
+
+    while True:
+        download_save_image(args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y)
+        print(I18n.get('Waiting %s seconds') % args.seconds)
+        time.sleep(args.seconds)
+
+    # schedule = sched.scheduler(time.time, time.sleep)
+
+    # def scheduler(sc, seconds, directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y):
+    #     download_save_image(directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y)   
         
-        sc.enter(seconds, 1, scheduler, (sc, seconds, directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y))
+    #     sc.enter(seconds, 1, scheduler, (sc, seconds, directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y))
+
+    # # initial save
+    # download_save_image(args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y)
+
+    # schedule.enter(args.seconds, 1, scheduler, (schedule, args.seconds, args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y))
     
-    schedule.enter(args.seconds, 1, scheduler, (schedule, args.seconds, args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y))
-    
-    download_save_image(args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y)  
-    schedule.run()
+    # schedule.run()
 
 
 if __name__ == '__main__':  
