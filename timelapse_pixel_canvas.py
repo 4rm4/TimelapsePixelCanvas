@@ -8,6 +8,7 @@ from urllib2 import Request as request, urlopen
 from urllib2 import URLError, HTTPError
 from PIL import Image
 import httplib
+from retry_decorator import retry
 
 import math
 
@@ -38,30 +39,10 @@ COLORS = [
 
 URL = 'https://pixelcanvas.io/api/bigchunk/%s.%s.bmp'
 
+@retry((HTTPError, URLError, httplib.IncompleteRead), tries=6, delay=3, backoff=2)
 def download_bmp(x, y):
-    try:
-        r = urlopen(request(URL % (x, y), headers = {'User-agent':'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)'}))
-    except HTTPError as e:
-        print('The server couldn\'t fulfill the request.')
-        print('Error code: ', e.code)
-        print('Trying again in 5 seconds (ctrl+c to cancel)')
-        time.sleep(5)
-        download_bmp(x,y)
-    except URLError as e:
-        print('We failed to reach a server.')
-        print('Reason: ', e.reason)
-        print('Trying again in 5 seconds (ctrl+c to cancel)')
-        time.sleep(5)
-        download_bmp(x,y)
-    else:
-        try:
-            return r.read()
-        except httplib.IncompleteRead as e:
-            print('Incomplte read exception.')
-            print('Trying again in 5 seconds (ctrl+c to cancel)')
-            time.sleep(5)
-            download_bmp(x,y)
-
+    r = urlopen(request(URL % (x, y), headers = {'User-agent':'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)'}))
+    return r.read()
 
 def parse_args():
     parser = ArgumentParser()

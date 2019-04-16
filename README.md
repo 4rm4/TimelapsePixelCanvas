@@ -3,31 +3,26 @@
 This is a script to create sequential screenshots of the area you want.
 #### How you can use this?
 
-Well, first you need Python 2.7 and install this:
-* pip install Pillow
+Python 2.7 is required.
 
-##### for windows
-if you needs pip 
-save from https://bootstrap.pypa.io/get-pip.py
-* python get-pip.py
+Install these packages:
+```bash
+$ pip install Pillow
+$ pip install https://github.com/saltycrane/retry-decorator/archive/v0.1.2.tar.gz
+```
 
-after pip installation
+#####Once setup, run the script:
 
-* python -m pip install Pillow
+Example:
+```bash
+$ python timelapse_pixel_canvas.py --start_x 0 --end_x 100 --start_y 0 --end_y 100 -s 20
+```
 
-#####After you can execute the code like this:
+### Parameter options: 
 
-* ./timelapse_pixel_canvas.py -x 0 -y 0 -s 10
-OR
-* /timelapse_pixel_canvas.py --start_x 0 --end_x 100 --start_y 0 --end_y 100 -s 20
-
-### What is each parameter? 
-
-* **-s** or **--seconds** it is the time will wait of every screenshot. Default: 60
-* **-r** or **--radius** it is the radius of your area you want. Works only with -x and -y. Default: 1
-* **-x** it is your point initial axis x
-* **-y** it is your point initial axis y
-* **--start_x** it is the point X axis what you want to begin. Ex: 156
-* **--end_x** it is the point X axis what you want to end. Ex: 200
-* **--start_y** it is the point y axis what you want to begin. Ex: -4000
-* **-d** or **--directory'** it's the directory you want to put the images.
+* **-s** or **--seconds** is the time between screenshots. Default: 60
+* **--start_x** is the start of the X range.
+* **--end_x** is the end of the X range.
+* **--start_y** is the start of the Y range.
+* **--end_y** is the end of the Y range.
+* **-d** or **--directory'** is the directory to store the output. Will create if it doesn't exist.
