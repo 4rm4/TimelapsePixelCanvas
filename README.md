@@ -21,8 +21,8 @@ $ python timelapse_pixel_canvas.py --start_x 0 --end_x 100 --start_y 0 --end_y 1
 ### Parameter options: 
 
 * **-s** or **--seconds** is the time between screenshots. Default: 60
-* **--start_x** is the start of the X range.
-* **--end_x** is the end of the X range.
-* **--start_y** is the start of the Y range.
-* **--end_y** is the end of the Y range.
+* **-sx** or **--start_x** is the start of the X range.
+* **-ex** or **--end_x** is the end of the X range.
+* **-sy** or **--start_y** is the start of the Y range.
+* **-ey** or **--end_y** is the end of the Y range.
 * **-d** or **--directory'** is the directory to store the output. Will create if it doesn't exist.

@@ -55,10 +55,10 @@ def parse_args():
     parser.add_argument('-x', required=False, type=int, dest='x')
     parser.add_argument('-y', required=False, type=int, dest='y')
     parser.add_argument('-d','--directory', required=False, default='./', dest='directory')
-    parser.add_argument('--start_x', required=False, type=int, dest='start_x')
-    parser.add_argument('--end_x', required=False, type=int, dest='end_x')
-    parser.add_argument('--start_y', required=False, type=int, dest='start_y')
-    parser.add_argument('--end_y', required=False, type=int, dest='end_y')
+    parser.add_argument('-sx', '--start_x', required=False, type=int, dest='start_x')
+    parser.add_argument('-ex', '--end_x', required=False, type=int, dest='end_x')
+    parser.add_argument('-sy', '--start_y', required=False, type=int, dest='start_y')
+    parser.add_argument('-ey', '--end_y', required=False, type=int, dest='end_y')
 
     return parser.parse_args()
 
