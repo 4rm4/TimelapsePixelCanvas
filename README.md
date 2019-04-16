@@ -26,3 +26,4 @@ $ python timelapse_pixel_canvas.py --start_x 0 --end_x 100 --start_y 0 --end_y 1
 * **-sy** or **--start_y** is the start of the Y range.
 * **-ey** or **--end_y** is the end of the Y range.
 * **-d** or **--directory** is the directory to store the output. Will create if it doesn't exist.
+* **-v** or **--verbose** is a flag to enable more technical details. 
