@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import division
-import sched, time, os, math, datetime
-
-from argparse import ArgumentParser
-from urllib2 import Request as request, urlopen
-from urllib2 import URLError, HTTPError
-from PIL import Image
+import time
+import os
+import math
+import datetime
 import httplib
+from urllib2 import Request as request, urlopen, URLError, HTTPError
+from argparse import ArgumentParser
+from __future__ import division
+
+from PIL import Image
 from retry_decorator import retry
+
 from i18n import I18n
 
-import math
+
 
 BLOCK_SIZE = 64
 AREA_LEFT = 7
@@ -237,21 +240,7 @@ def main():
         download_save_image(args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y)
         print(I18n.get('Waiting %s seconds') % args.seconds)
         time.sleep(args.seconds)
-
-    # schedule = sched.scheduler(time.time, time.sleep)
-
-    # def scheduler(sc, seconds, directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y):
-    #     download_save_image(directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y)   
         
-    #     sc.enter(seconds, 1, scheduler, (sc, seconds, directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y))
-
-    # # initial save
-    # download_save_image(args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y)
-
-    # schedule.enter(args.seconds, 1, scheduler, (schedule, args.seconds, args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y))
-    
-    # schedule.run()
-
 
 if __name__ == '__main__':  
     try:
