@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import division
+
 import time
 import os
 import math
@@ -7,7 +9,6 @@ import datetime
 import httplib
 from urllib2 import Request as request, urlopen, URLError, HTTPError
 from argparse import ArgumentParser
-from __future__ import division
 
 from PIL import Image
 from retry_decorator import retry
