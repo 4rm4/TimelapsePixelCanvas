@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import division
+from __future__ import print_function
 
 import time
 import os
 import math
 import datetime
 import httplib
+import sys
 from urllib2 import Request as request, urlopen, URLError, HTTPError
 from argparse import ArgumentParser
 
@@ -60,6 +62,7 @@ def parse_args():
     parser.add_argument('-ex', '--end_x', required=False, type=int, dest='end_x')
     parser.add_argument('-sy', '--start_y', required=False, type=int, dest='start_y')
     parser.add_argument('-ey', '--end_y', required=False, type=int, dest='end_y')
+    parser.add_argument('-v', '--verbose', required=False, default=False, dest='verbose', action='store_true')
 
     return parser.parse_args()
 
@@ -132,7 +135,7 @@ def calc_centers_axis(middle_x, middle_y):
     offset_y = center_y % 15
     return center_x - offset_x, center_y - offset_y, offset_x, offset_y
 
-def bigchunk(max_chunks, middle_x, middle_y):
+def bigchunk(max_chunks, middle_x, middle_y, verbose):
     center_block_x, center_block_y, offset_x, offset_y = calc_centers_axis(middle_x, middle_y)
 
     num_blocks = get_num_blocks(max_chunks)
@@ -140,17 +143,30 @@ def bigchunk(max_chunks, middle_x, middle_y):
 
     if offset_x is not 0:
         end = (center_block_x + offset_x + num_blocks) * 64
-        print(I18n.get('blind east of %s') % end)
+        if verbose:
+            print(I18n.get('blind east of %s') % end)
     if offset_y is not 0:
         end = (center_block_y + offset_y + num_blocks) * 64
-        print(I18n.get('blind south of %s') % end)
+        if verbose:
+            print(I18n.get('blind south of %s') % end)
 
     # matrix
     map_image = setup_map_image(num_blocks, center_block_x, center_block_y)
 
-    for center_x in xrange(center_block_x - num_blocks, 1 + center_block_x + num_blocks, TOTAL_AREA):
-        for center_y in xrange(center_block_y - num_blocks, 1 + center_block_y + num_blocks, TOTAL_AREA):
-            print(I18n.get('Loading chunk (%s, %s)...') % (center_x, center_y))
+    cx_range = xrange(center_block_x - num_blocks, 1 + center_block_x + num_blocks, TOTAL_AREA)
+    cy_range = xrange(center_block_y - num_blocks, 1 + center_block_y + num_blocks, TOTAL_AREA)
+
+    total_chunks = len(cx_range) * len(cy_range)
+    chunk_count = 0
+
+    for center_x in cx_range:
+        for center_y in cy_range:
+            if verbose:
+                print(I18n.get('Loading chunk (%s, %s)...') % (center_x, center_y))
+            else:
+                chunk_count += 1
+                print(I18n.get('>> Loading canvas [%s/%s]', True) % (chunk_count, total_chunks), end='\r')
+                sys.stdout.flush()
             raw = download_bmp(center_x, center_y)
             index = 0
             for block_y in xrange(center_y - AREA_LEFT, center_y + AREA_RIGHT):
@@ -162,6 +178,8 @@ def bigchunk(max_chunks, middle_x, middle_y):
                             map_image[actual_x    ][actual_y] = ord(raw[index]) >> 4
                             map_image[actual_x + 1][actual_y] = ord(raw[index]) & 0x0F
                             index += 1
+    if not verbose:
+        print('', end='\r')
     return map_image
 
 def get_sizes(chunks, x, y, start_x, end_x, start_y, end_y):
@@ -210,8 +228,8 @@ def save_image(image, directory):
     image.save(name_file)
     print(I18n.get('Saved %s') % name_file)
 
-def download_save_image(directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y):
-    map_image = bigchunk(chunks, middle_x, middle_y)
+def download_save_image(directory, chunks, width, height, middle_x, middle_y, start_x, start_y, end_x, end_y, verbose):
+    map_image = bigchunk(chunks, middle_x, middle_y, verbose)
 
     image, pix = create_image(width, height)
 
@@ -238,7 +256,7 @@ def main():
     
 
     while True:
-        download_save_image(args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y)
+        download_save_image(args.directory, max_chunks, width, height, middle_x, middle_y, args.start_x, args.start_y, args.end_x, args.end_y, args.verbose)
         print(I18n.get('Waiting %s seconds') % args.seconds)
         time.sleep(args.seconds)
         
@@ -247,4 +265,5 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print 'Bye'
+        print()
+        print(I18n.get('Quitting'))
