@@ -140,10 +140,10 @@ def bigchunk(max_chunks, middle_x, middle_y):
 
     if offset_x is not 0:
         end = (center_block_x + offset_x + num_blocks) * 64
-        print(I18n.get("This bot may be blind for all pixels east of %s") % end)
+        print(I18n.get('blind east of %s') % end)
     if offset_y is not 0:
         end = (center_block_y + offset_y + num_blocks) * 64
-        print(I18n.get("This bot may be blind for all pixels south of %s") % end)
+        print(I18n.get('blind south of %s') % end)
 
     # matrix
     map_image = setup_map_image(num_blocks, center_block_x, center_block_y)
