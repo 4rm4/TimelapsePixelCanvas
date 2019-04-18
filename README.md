@@ -3,7 +3,7 @@
 This is a script to create sequential screenshots of the area you want.
 #### How you can use this?
 
-Python 2.7 is required.
+Python 3.7+ is required.
 
 Install these packages:
 ```bash

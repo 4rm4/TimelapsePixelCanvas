@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import division
-from __future__ import print_function
-
 import time
 import os
 import math
 import datetime
-import httplib
 import sys
-from urllib2 import Request as request, urlopen, URLError, HTTPError
+import requests
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 from argparse import ArgumentParser
 
 from PIL import Image
@@ -46,10 +43,10 @@ COLORS = [
 
 URL = 'https://pixelcanvas.io/api/bigchunk/%s.%s.bmp'
 
-@retry((HTTPError, URLError, httplib.IncompleteRead), tries=6, delay=3, backoff=2)
+@retry((HTTPError, ConnectionError, Timeout), tries=6, delay=3, backoff=2)
 def download_bmp(x, y):
-    r = urlopen(request(URL % (x, y), headers = {'User-agent':'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)'}))
-    return r.read()
+    resp = requests.get(URL % (x, y), headers={'User-agent':'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)'}, stream=True)
+    return bytearray(resp.content)
 
 def parse_args():
     parser = ArgumentParser()
@@ -118,9 +115,9 @@ def get_midpoint(x, y, start_x, end_x, start_y, end_y):
 def setup_map_image(num_blocks, middle_x, middle_y):
     map_image = {}
     last = 0
-    for x in xrange((middle_x - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + middle_x) * BLOCK_SIZE):
+    for x in range((middle_x - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + middle_x) * BLOCK_SIZE):
         map_image[x] = {}
-        for y in xrange((middle_y - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + middle_y) * BLOCK_SIZE):
+        for y in range((middle_y - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (num_blocks + AREA_RIGHT + middle_y) * BLOCK_SIZE):
             map_image[x][y] = None
     return map_image
 
@@ -153,8 +150,8 @@ def bigchunk(max_chunks, middle_x, middle_y, verbose):
     # matrix
     map_image = setup_map_image(num_blocks, center_block_x, center_block_y)
 
-    cx_range = xrange(center_block_x - num_blocks, 1 + center_block_x + num_blocks, TOTAL_AREA)
-    cy_range = xrange(center_block_y - num_blocks, 1 + center_block_y + num_blocks, TOTAL_AREA)
+    cx_range = range(center_block_x - num_blocks, 1 + center_block_x + num_blocks, TOTAL_AREA)
+    cy_range = range(center_block_y - num_blocks, 1 + center_block_y + num_blocks, TOTAL_AREA)
 
     total_chunks = len(cx_range) * len(cy_range)
     chunk_count = 0
@@ -165,18 +162,17 @@ def bigchunk(max_chunks, middle_x, middle_y, verbose):
                 print(I18n.get('Loading chunk (%s, %s)...') % (center_x, center_y))
             else:
                 chunk_count += 1
-                print(I18n.get('>> Loading canvas [%s/%s]', True) % (chunk_count, total_chunks), end='\r')
-                sys.stdout.flush()
+                print(I18n.get('>> Loading canvas [%s/%s]', True) % (chunk_count, total_chunks), end='\r', flush=True)
             raw = download_bmp(center_x, center_y)
             index = 0
-            for block_y in xrange(center_y - AREA_LEFT, center_y + AREA_RIGHT):
-                for block_x in xrange(center_x - AREA_LEFT, center_x + AREA_RIGHT):
-                    for y in xrange(BLOCK_SIZE):
+            for block_y in range(center_y - AREA_LEFT, center_y + AREA_RIGHT):
+                for block_x in range(center_x - AREA_LEFT, center_x + AREA_RIGHT):
+                    for y in range(BLOCK_SIZE):
                         actual_y = (block_y * BLOCK_SIZE) + y
-                        for x in xrange(0, BLOCK_SIZE, 2):
+                        for x in range(0, BLOCK_SIZE, 2):
                             actual_x = (block_x * BLOCK_SIZE) + x
-                            map_image[actual_x    ][actual_y] = ord(raw[index]) >> 4
-                            map_image[actual_x + 1][actual_y] = ord(raw[index]) & 0x0F
+                            map_image[actual_x    ][actual_y] = raw[index] >> 4
+                            map_image[actual_x + 1][actual_y] = raw[index] & 0x0F
                             index += 1
     if not verbose:
         print('', end='\r')
@@ -200,9 +196,9 @@ def convert_custom_image(map_image, pix, start_x, end_x, start_y, end_y):
     bigger_y = (start_y if start_y > end_y else end_y)
     pix_x, pix_y = 0, 0
     
-    for x in xrange(minor_x, bigger_x ):
+    for x in range(minor_x, bigger_x ):
         pix_y = 0
-        for y in xrange(minor_y, bigger_y):
+        for y in range(minor_y, bigger_y):
             pix[pix_x, pix_y] = COLORS[map_image[x][y]]
             pix_y += 1
         pix_x += 1
@@ -213,9 +209,9 @@ def convert_image_total(map_image, pix, chunks, middle_x, middle_y):
     num_blocks = get_num_blocks(chunks)
     pix_x, pix_y = 0, 0
 
-    for y in xrange((middle_y - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (middle_y + (num_blocks + AREA_RIGHT)) * BLOCK_SIZE):
+    for y in range((middle_y - (num_blocks + AREA_LEFT)) * BLOCK_SIZE, (middle_y + (num_blocks + AREA_RIGHT)) * BLOCK_SIZE):
         pix_x = 0
-        for x in xrange((middle_x - (num_blocks + AREA_LEFT))* BLOCK_SIZE, (middle_y + (num_blocks + AREA_RIGHT)) * BLOCK_SIZE):
+        for x in range((middle_x - (num_blocks + AREA_LEFT))* BLOCK_SIZE, (middle_y + (num_blocks + AREA_RIGHT)) * BLOCK_SIZE):
             pix[pix_x, pix_y] = COLORS[map_image[x][y]]
             pix_x += 1
         pix_y += 1
